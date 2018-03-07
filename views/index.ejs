@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>留言本</title>
+  <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+  <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <script src="http://code.jquery.com/jquery-2.2.4.js" integrity="sha256-iT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI=" crossorigin="anonymous"></script>
+  <style>
+    .J_Form{
+      margin-bottom: 30px;
+    }
+    .J_Del{
+      float: right;
+      cursor: pointer;
+      margin-right: 20px;
+    }
+    .J_Update{
+      float: right;
+      cursor: pointer;
+      margin-right: 20px;
+    }
+    .hide{
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h3>简易留言本</h3>
+    <form class="form-inline J_Form">
+      <div class="form-group">
+        <input class="form-control" type="text" name="user" placeholder="请输入您的名字">
+        <input class="form-control" type="text" name="content" placeholder="请输入留言">
+        <button class="btn btn-default" type="submit">新增</button>
+      </div>
+    </form>
+    <div class="J_List">
+      <% for(let i=0;i<list.length;i++){%>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <%= list[i].user%>
+            <a class="J_Del" dname=<%=list[i].user%> >删除留言</a>
+          </div>
+          <div class="panel-body">
+            <span><%= list[i].content%></span>
+            <input class="form-control hide" type="text" name="content" value=<%= list[i].content%> >
+            <a class="J_Update" dname=<%=list[i].user%>>点击修改</a>
+          </div>
+        </div>
+        <%}%>
+    </div>
+
+  </div>
+  <script>
+
+    /*
+      方法一 ejs 末班引擎直接查数据库并渲染
+
+      方法二 ajax 掉查询
+      $.get("/find",{},function(data){
+        console.info(data);
+      })
+    */
+    // ajax 初始化 数据列表
+    function initList(){
+      $.get("/find",{},function(info){
+        if(!info.code){
+          var data = info.data;
+          var list = "";
+          data.forEach(function(item){
+            list += `<div class="panel panel-default">
+                      <div class="panel-heading">${item.user}
+                        <a class="J_Del" dname=${item.user}>删除留言</a>
+                      </div>
+                      <div class="panel-body">
+                        <span>${item.content}</span>
+                        <input class="form-control hide" type="text" name="content" value=${item.content} >
+                        <a class="J_Update" dname=${item.user}>点击修改</a>
+                      </div>
+                    </div>`
+          })
+          $(".J_List").html(list)
+        }
+      })
+    }
+    function cleanInput(){
+      $("form").find("input").val("");
+    }
+    // 事件全采取事件委托形式绑定
+    // 删除留言
+    $(document).on("click",".J_Del", function() {
+      var name = $(this).attr("dname");
+      var params = {"user":name};
+      $.post("/del", params, function(info) {
+        if (!info.code) {
+          initList()
+        }
+      })
+    })
+    //新增留言
+    $(document).on("submit",".J_Form",function(event) {
+      /* Act on the event */
+      var paramsArr = $(this).serializeArray();
+      var params = {};
+      paramsArr.forEach(function(item) {
+        params[item.name] = item.value
+      })
+      $.post("/add", params, function(info) {
+        if (!info.code) {
+          initList()
+          cleanInput()
+        }
+      })
+      return false;
+    });
+    // 编辑留言
+    $(document).on("click",".J_Update",function(){
+      var $th = $(this)
+      var $span = $th.siblings('span');
+      var $input = $th.siblings('input');
+      if($input.hasClass('hide')){
+        $span.addClass('hide');
+        $input.removeClass('hide');
+        $th.html("保存留言")
+      }else{
+        var params = {
+          "user":$th.attr("dname"),
+          "content":$input.val()
+        }
+        $.post("/update",params,function(info){
+          if(!info.code){
+            initList()
+          }
+        })
+      }
+
+    })
+  </script>
+</body>
+
+</html>
